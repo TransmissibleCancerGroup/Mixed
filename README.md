@@ -6,3 +6,5 @@ List of Tools in here:
 
 1. R: Base triplet frequency counter for fasta-genome of interest
 
+2. R: Create circos plots for Structural Variant analysis
+
