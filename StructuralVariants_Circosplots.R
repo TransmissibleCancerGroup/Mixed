@@ -9,7 +9,6 @@ library(stringr)
 library(circlize)
 library(GenomicRanges)
 
-
 ## 1. Load SVs (as .bedpe file)
 ###############################
 
