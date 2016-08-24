@@ -1,7 +1,7 @@
 ###################### BRASS circos plots ###########################
 ########################### Version 1.0 #############################
 
-## mrs72
+## Maximilian Stammnitz, mrs72
 ## Last Update - 24/08/2016 ##
 ##############################
 
@@ -17,8 +17,8 @@ library(GenomicRanges)
 SVs <- read.table("All_samples_multi_small.rearr",sep = '\t', header=F)
 SVs <- SVs[,c(1,3,4,5,7,8,2,6,9:16)] # might have to re-sort tumour and host columns (as specified in .rearr-header)
 
-colnames(SVs) <- c("CHR-1",	"START-1", "END-1", "CHR-2",	"START-2",	"END-2", "STRAND-1", "STRAND-2", 
-                   "T1", "T2", "T3", "T4", "H1", "H2", "H3", "H4")
+colnames(SVs) <- c("CHR-1","START-1","END-1","CHR-2","START-2","END-2","STRAND-1","STRAND-2", 
+                   "T1","T2","T3","T4","H1","H2","H3","H4")
 
 
 ## 2. Annotate Genes
