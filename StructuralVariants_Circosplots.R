@@ -10,7 +10,7 @@ library(circlize)
 library(GenomicRanges)
 
 
-## 1. Load SVs (as .bedpe file)
+## 1. Load SVs (as .rearr file)
 ###############################
 
 ## Set of multi-output: 4 Tumours, 4 Hosts (already removed read-IDs with awk prior to loading, saving memory)
