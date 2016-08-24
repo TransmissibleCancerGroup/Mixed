@@ -22,7 +22,11 @@ colnames(T_SVs) <- c("CHR-1",	"START-1",	"END-1",
 ############
 
 # e.g Ends of contigs, ends of supercontigs and full supercontig filter (devil-spec.)
+
+
 # e.g. Simple repeats (devil spec.)
+
+
 # e.g. Read-threshold: > 15 supports
 thresh <- 15
 T_SVs.filt <- T_SVs[which(T_SVs[,"READS"]>thresh),]
