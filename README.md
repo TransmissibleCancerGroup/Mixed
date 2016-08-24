@@ -8,3 +8,5 @@ List of Tools in here:
 
 2. R: Create circos plots for Structural Variant analysis
 
+3. Python: Extract data from footer of BRASS output files
+
