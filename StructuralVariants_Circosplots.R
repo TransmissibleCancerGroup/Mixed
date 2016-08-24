@@ -75,8 +75,7 @@ SVs <- annotate.genes(SVs)
 contigends <- function(x){
   
   devil.contig.gaps <- read.table("Contigends.txt", header=T)
-  require(GenomicRanges)
-  
+
   # 1. Left Breakpoint
   Input.left.Ranges <- GRanges(seqnames = Rle(x[,1]),
                                ranges = IRanges(start = as.integer(x[,2]),
@@ -247,13 +246,13 @@ SVs.filt.nogerm <- SVs.filt[rowSums(SVs.filt[,13:16])<=3,]
 # b. Less than or 10 reads in total
 SVs.filt.nogerm <- SVs.filt.nogerm[-which(rowSums(SVs.filt.nogerm[,9:16])<=10),]
 
-## additional rules for subsetting tumour-shared and tumour-unique variants
-## e.g 
-## Pot. somatic subset of shared T1/T2
+## additional rules for subsetting tumour-shared and tumour-unique variants, e.g...
+
+## Potentially somatic subset of shared T1/T2
 ## 10 or more reads in both T1 and T2, less than or 3 reads in T3 & T4
 T1.T2.shared.only <- SVs.filt.nogerm[which(SVs.filt.nogerm[,'T1']>=10 & SVs.filt.nogerm[,'T2']>=10 & SVs.filt.nogerm[,'T3']<=3 & SVs.filt.nogerm[,'T4']<=3),]
 
-## Pot. somatic subset of shared T1-unique
+## Somatic subset of T1-unique
 ## 10 or more reads in T1 but less than or 3 reads in T2, T3 & T4
 T86.unique <- SVs.filt.nogerm[which(SVs.filt.nogerm[,'T1']>=10 & SVs.filt.nogerm[,'T2']<=3 & SVs.filt.nogerm[,'T3']<=3 & SVs.filt.nogerm[,'T4']<=3),]
 
