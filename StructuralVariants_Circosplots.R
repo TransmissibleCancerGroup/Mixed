@@ -1,13 +1,14 @@
 ###################### BRASS circos plots ###########################
 ########################### Version 1.0 #############################
 
-## mrs72
+## mrs72 (Max Stammnitz)
 ## Last Update - 24/08/2016 ##
 ##############################
 
 library(stringr)
 library(circlize)
 library(GenomicRanges)
+
 
 ## 1. Load SVs (as .bedpe file)
 ###############################
