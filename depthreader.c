@@ -7,7 +7,11 @@
 
 /*
 Extract summary statistics from samtools depth output
+
+Compile with
+gcc -O3 -std=c99 -o depthreader depthreader.c -lz -lm
 */
+
 
 /* Size of the block of memory to use for reading. */
 #define LENGTH 0x1000
@@ -36,7 +40,7 @@ int main (int argc, const char** argv)
             exit (EXIT_FAILURE);
     }
 
-    int nLines=0;
+    long int nLines=0;
     int nTabs=0;
     long int sumCoverage=0;
     long int sumSqCoverage=0;
@@ -44,9 +48,9 @@ int main (int argc, const char** argv)
     unsigned char field[LENGTH];
 
     while (1) {
-        int err;                    
+        int err;
         int bytes_read;
-        long int fieldValue;
+        int fieldValue;
         unsigned char buffer[LENGTH];
         bytes_read = gzread (file, buffer, LENGTH - 1);
         buffer[bytes_read] = '\0';
@@ -62,7 +66,7 @@ int main (int argc, const char** argv)
                 fieldValue = atol((char *) field);
                 sumCoverage += fieldValue;
                 sumSqCoverage += fieldValue*fieldValue;
-                
+
                 //reset field buffer and tab counter ready for next line
                 nTabs = 0;
                 clearBuffer((unsigned char *) field, j);
@@ -88,7 +92,7 @@ int main (int argc, const char** argv)
         }
     }
     gzclose (file);
-    printf ("Read total of %d lines\n", nLines);
+    printf ("Read total of %ld lines\n", nLines);
     printf ("Sum coverage was %ld\n", sumCoverage);
     printf ("SumSq coverage was %ld\n", sumSqCoverage);
     printf ("  mean = %f\n", (double)sumCoverage/(double)nLines);
