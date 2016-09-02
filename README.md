@@ -12,3 +12,4 @@ List of Tools in here:
 
 4. Ruby: Write multiple pages of a pdf onto single pages (outputs LaTeX)
 
+5. C: Depthreader - extract summary statistics from (optionally gzipped) samtools depth output (10x faster than awk). Compile with `gcc -o depthreader -std=c99 -O3 depthreader.c -lz -lm`.
