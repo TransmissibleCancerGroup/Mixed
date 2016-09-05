@@ -44,6 +44,7 @@ int main (int argc, const char** argv)
     int nTabs=0;
     long int sumCoverage=0;
     long int sumSqCoverage=0;
+    int maxCoverage=0;
     int j=0;
     unsigned char field[LENGTH];
 
@@ -64,6 +65,7 @@ int main (int argc, const char** argv)
             if (buffer[i]=='\n') {
                 nLines += 1;
                 fieldValue = atol((char *) field);
+                if (fieldValue > maxCoverage) maxCoverage = fieldValue;  
                 sumCoverage += fieldValue;
                 sumSqCoverage += fieldValue*fieldValue;
 
@@ -95,6 +97,7 @@ int main (int argc, const char** argv)
     printf ("Read total of %ld lines\n", nLines);
     printf ("Sum coverage was %ld\n", sumCoverage);
     printf ("SumSq coverage was %ld\n", sumSqCoverage);
+    printf ("Max coverage was %d\n", maxCoverage);
     printf ("  mean = %f\n", (double)sumCoverage/(double)nLines);
     printf ("  s.d. = %f\n", sqrt(((double)sumSqCoverage - ((double)sumCoverage*(double)sumCoverage/(double)nLines)) / ((double)nLines - 1)));
     return 0;
