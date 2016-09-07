@@ -13,66 +13,55 @@ Usage:
 import sys
 import os
 import logging
+from functools import reduce
 
 logger = logging.getLogger()
 logger.addHandler(logging.StreamHandler())
 
-class Result(object):
 
+class Result(object):
     def __init__(self, filename):
-        self.filename = filename
-        self.total_scanned = 0
-        self.properly_paired = 0
-        self.half_unmapped = 0
-        self.near_mate = 0
-        self.low_quality = 0
-        self.small_insertion = 0
-        self.repeat_features = 0
-        self.total_groups_found = 0
-        self.rearr_groups_omitted = 0
-        self.total_groups_emitted = 0
+        self.values = {'FileName': filename}
+
+    def add(self, item, value):
+        self.values[item] = value
+
+    def keys(self):
+        return set(self.values)
+
+    def output(self, keys):
+        fields = []
+        for k in keys:
+            fields.append(str(self.values.get(k, 0)))
+        return '\t'.join(fields) + '\n'
+
+
+class SetOfResults(object):
+    def __init__(self):
+        self.results = []
+
+    def __len__(self):
+        return len(self.results)
 
     def __str__(self):
-        return '{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(
-            self.filename, self.total_scanned, self.properly_paired,
-            self.half_unmapped, self.near_mate, self.low_quality,
-            self.small_insertion, self.repeat_features,
-            self.total_groups_found, self.rearr_groups_omitted,
-            self.total_groups_emitted)
+        return self.output()
 
+    def keys(self):
+        return reduce(set.union, [result.keys() for result in self.results], set())
 
-HEADER = '\t'.join([
-    "FILENAME",
-    "TOTAL_SCANNED",
-    "PROPERLY_PAIRED",
-    "HALF_UNMAPPED",
-    "NEAR_MATE",
-    "LOW_QUALITY",
-    "SMALL_INSERTION",
-    "REPEAT_FEATURES",
-    "TOTAL_GROUPS_FOUND",
-    "REARR_GROUPS_OMITTED",
-    "TOTAL_GROUPS_EMITTED\n"
-    ])
+    def output(self):
+        lines = []
+        keys = ['FileName'] + [key for key in sorted(self.keys()) if key != 'FileName']
+        if keys == ['FileName']:
+            raise ValueError('No files had any footer information')
+        lines.append('\t'.join(keys) + '\n')
+        for result in self.results:
+            lines.append(result.output(keys))
+        return ''.join(lines)
 
-def get_num_from_line(line):
-    """
-    Read the number in the last field of a line, or fail with some
-    error info. Failure to read returns 0.
-    """
-    try:
-        num = line.split()[-1]
-    except IndexError as err:
-        logger.error("Empty line? Line:{} Err:{}".format(line, err))
-        return 0
+    def append(self, result):
+        self.results.append(result)
 
-    try:
-        num = int(num)
-    except ValueError as err:
-        logger.error("Not a number? Line:{} Err:{}".format(line, err))
-        return 0
-
-    return num
 
 def skip_to_end(f):
     """
@@ -89,9 +78,11 @@ def skip_to_end(f):
 
 
 def process_file(filename):
-    """
-    Read pertinent info from the file footer.
-    """
+    import re
+
+    # Regex extracts FIELD NAME and VALUE from lines of the form
+    # "#   string FIELD NAME: int VALUE"
+    rgx = re.compile('^[#|%]\s+(.+)\:\s+(\d+)') # comment char can be # or %
     if not os.path.exists(filename):
         logger.error("File {} does not exist".format(filename))
         return
@@ -101,45 +92,24 @@ def process_file(filename):
     with open(filename) as fl:
         skip_to_end(fl)
         for line in fl:
-            trim = line.lstrip('#').strip()
-            if trim == '':
-                continue
+            search = rgx.search(line)
+            if search is not None:
 
-            if trim.startswith('Total reads scanned'):
-                result.total_scanned = get_num_from_line(trim)
+                # Remove spaces and put in title case
+                itemname = re.sub('[^a-zA-Z<]+', '', search.group(1).title())
 
-            elif trim.startswith("Properly paired"):
-                result.properly_paired = get_num_from_line(trim)
+                # One field starts with non-alphanumeric chars - " < N read pairs"
+                # so this replaces "< N" with TooFew
+                itemname = re.sub('<\d?', 'TooFew', itemname)
 
-            elif trim.startswith("(Half-)unmapped"):
-                result.half_unmapped = get_num_from_line(trim)
-
-            elif trim.startswith("Near mate"):
-                result.near_mate = get_num_from_line(trim)
-
-            elif trim.startswith("Low quality"):
-                result.low_quality = get_num_from_line(trim)
-
-            elif trim.startswith('Small insertion'):
-                result.small_insertion = get_num_from_line(trim)
-
-            elif trim.startswith('Repeat features'):
-                result.repeat_features = get_num_from_line(trim)
-
-            elif trim.startswith('Total groups found'):
-                result.total_groups_found = get_num_from_line(trim)
-
-            elif trim.startswith('< 2 read pairs'):
-                result.rearr_groups_omitted = get_num_from_line(trim)
-
-            elif trim.startswith('Total groups emitted'):
-                result.total_groups_emitted = get_num_from_line(trim)
-
+                # Value is an integer
+                value = int(search.group(2))
+                result.add(itemname, value)
     return result
 
 
 if __name__ == "__main__":
-    processed = []
+    processed = SetOfResults()
 
     if len(sys.argv) > 1:  # Prefer files on command line
         filenames = sys.argv[1:]
@@ -161,9 +131,11 @@ if __name__ == "__main__":
             processed.append(result)
 
     if len(processed) > 0:  # Successfully processed some files, so write to stdout
-        sys.stdout.write(HEADER)
-        for result in processed:
-            sys.stdout.write(str(result))
+        try:
+            sys.stdout.write(str(processed))
+        except ValueError as err:
+            logger.error(str(err))
+            sys.stderr.write(DOC)
 
     else:  # FAIL!
         logger.error("No files were found")
