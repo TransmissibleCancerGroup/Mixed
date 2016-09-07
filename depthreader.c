@@ -16,6 +16,8 @@ gcc -O3 -std=c99 -o depthreader depthreader.c -lz -lm
 /* Size of the block of memory to use for reading. */
 #define LENGTH 0x1000
 
+void clearBuffer(unsigned char *, int);
+
 /*
 Wipe buffer by filling with null bytes
 */
@@ -27,19 +29,7 @@ void clearBuffer(unsigned char * buffer, int j) {
 
 int main (int argc, const char** argv)
 {
-    if (argc != 2) {
-        fprintf(stderr, "Usage: %s file\n", argv[0]);
-        return 1;
-    }
-
     gzFile * file;
-    file = gzopen (argv[1], "r");
-    if (! file) {
-        fprintf (stderr, "gzopen of '%s' failed: %s.\n", argv[1],
-                 strerror (errno));
-            exit (EXIT_FAILURE);
-    }
-
     long int nLines=0;
     int nTabs=0;
     long int sumCoverage=0;
@@ -47,6 +37,20 @@ int main (int argc, const char** argv)
     int maxCoverage=0;
     int j=0;
     unsigned char field[LENGTH];
+
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s file\n", argv[0]);
+        return 1;
+    }
+
+    file = gzopen (argv[1], "r");
+    if (! file) {
+        fprintf (stderr, "gzopen of '%s' failed: %s.\n", argv[1],
+                 strerror (errno));
+            exit (EXIT_FAILURE);
+    }
+
+    clearBuffer((unsigned char *)field, LENGTH-1);
 
     while (1) {
         int err;
@@ -64,8 +68,8 @@ int main (int argc, const char** argv)
             }
             if (buffer[i]=='\n') {
                 nLines += 1;
-                fieldValue = atol((char *) field);
-                if (fieldValue > maxCoverage) maxCoverage = fieldValue;  
+                fieldValue = atoi((char *) field);
+                if (fieldValue > maxCoverage) maxCoverage = fieldValue;
                 sumCoverage += fieldValue;
                 sumSqCoverage += fieldValue*fieldValue;
 
