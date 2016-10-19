@@ -16,8 +16,6 @@ gcc -O3 -std=c99 -o depthreader depthreader.c -lz -lm
 /* Size of the block of memory to use for reading. */
 #define LENGTH 0x1000
 
-void clearBuffer(unsigned char *, int);
-
 /*
 Wipe buffer by filling with null bytes
 */
