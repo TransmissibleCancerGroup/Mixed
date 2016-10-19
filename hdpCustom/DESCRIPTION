@@ -13,7 +13,10 @@ Depends:
     R (>= 3.2)
 Imports:
     hdp (>= 0.1.0),
-    methods (>= 3.2)
+    methods (>= 3.2),
+    coda,
+    flexclust,
+    lsa
 License: GPL-3
 LazyData: TRUE
 RoxygenNote: 5.0.1

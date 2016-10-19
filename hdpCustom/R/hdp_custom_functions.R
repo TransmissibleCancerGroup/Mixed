@@ -4,6 +4,8 @@
 
 #' function to merge cols of a matrix according to new (numeric) column labels
 #' ans will be sorted by numeric column name
+#' @param mx The matrix to merge
+#' @param labels The (new) set of labels for the matrix
 merge_cols <- function(mx, labels){
   colnames(mx) <- labels
   num_rows <- nrow(mx)
@@ -21,6 +23,8 @@ merge_cols <- function(mx, labels){
 
 #' function to merge elements of a list according to new (numeric) names
 #' ans will be sorted by numeric element names (is this still needed?)
+#' @param lst The list to merge
+#' @param labels The (new) labels for the list
 merge_elems <- function(lst, labels){
   names(lst) <- labels
   # init list with new names
@@ -33,10 +37,29 @@ merge_elems <- function(lst, labels){
   return(ans)
 }
 
-#' Extracts components from single MCMC chain
+#' Extracts components from an hdp sample chain or multi-chain
+#'
+#' @param x hdpSampleChain or hdpSampleMulti object
+#' @param sig.level Significance level to use when calculating HPD credible intervals (default 0.95)
+#' @param cos.merge Merge components with cosine similarity above this threshold (default 0.90)
+#' @param redo Logical. If true - constituent chains with previously calculated components will be re-calculated. Only used for hdpSampleMulti.
 #' @export
+hdp_extract_components <- function(chain, sig.level = 0.95, cos.merge = 0.90, redo = TRUE) {
+  if (class(chain) == "hdpSampleChain") {
+    hdp_extract_comp_single(chain, sig.level, cos.merge)
+  }
+  else if (class(chain) == "hdpSampleMulti") {
+    hdp_extract_comp_multi(chain, sig.level, cos.merge, redo)
+  }
+  else stop("chain must have class hdpSampleChain or hdpSampleMulti")
+}
+
+#' Extracts components from single MCMC chain
 #' @importFrom "hdp" comp_categ_counts sampling_seed numcluster clust_categ_counts clust_dp_counts numcateg final_hdpState numdp hdp_settings dp pseudoDP comp_dp_counts
 #' @importFrom "methods" as validObject
+#' @param chain hdpSampleChain or hdpSampleMulti object
+#' @param sig.level Significance level to use when calculating HPD credible intervals (default 0.95)
+#' @param cos.merge Merge components with cosine similarity above this threshold (default 0.90)
 hdp_extract_comp_single <- function(chain, sig.level = 0.95, cos.merge=0.90){
 
   # input checks
@@ -374,10 +397,13 @@ hdp_extract_comp_single <- function(chain, sig.level = 0.95, cos.merge=0.90){
 }
 
 #' Extracts components from multiple MCMC chains
-#' @export
 #' @importFrom "hdp" comp_categ_counts numcateg final_hdpState numdp hdp_settings dp pseudoDP comp_dp_counts
 #' @importFrom "methods" as validObject
-hdp_extract_comp_multi <- function(chains, cos.merge=0.90, sig.level=0.95, redo=TRUE){
+#' @param chains hdpSampleChain or hdpSampleMulti object
+#' @param sig.level Significance level to use when calculating HPD credible intervals (default 0.95)
+#' @param cos.merge Merge components with cosine similarity above this threshold (default 0.90)
+#' @param redo Logical. If true - constituent chains with previously calculated components will be re-calculated. Only used for hdpSampleMulti.
+hdp_extract_comp_multi <- function(chains, sig.level=0.95, cos.merge=0.90, redo=TRUE){
 
   # input checks
   if (class(chains) != "hdpSampleMulti") {

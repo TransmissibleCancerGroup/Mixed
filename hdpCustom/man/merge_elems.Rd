@@ -7,6 +7,11 @@ ans will be sorted by numeric element names (is this still needed?)}
 \usage{
 merge_elems(lst, labels)
 }
+\arguments{
+\item{lst}{The list to merge}
+
+\item{labels}{The (new) labels for the list}
+}
 \description{
 function to merge elements of a list according to new (numeric) names
 ans will be sorted by numeric element names (is this still needed?)

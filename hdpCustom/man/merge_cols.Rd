@@ -7,6 +7,11 @@ ans will be sorted by numeric column name}
 \usage{
 merge_cols(mx, labels)
 }
+\arguments{
+\item{mx}{The matrix to merge}
+
+\item{labels}{The (new) set of labels for the matrix}
+}
 \description{
 function to merge cols of a matrix according to new (numeric) column labels
 ans will be sorted by numeric column name

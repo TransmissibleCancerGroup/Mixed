@@ -6,6 +6,13 @@
 \usage{
 hdp_extract_comp_single(chain, sig.level = 0.95, cos.merge = 0.9)
 }
+\arguments{
+\item{chain}{hdpSampleChain or hdpSampleMulti object}
+
+\item{sig.level}{Significance level to use when calculating HPD credible intervals (default 0.95)}
+
+\item{cos.merge}{Merge components with cosine similarity above this threshold (default 0.90)}
+}
 \description{
 Extracts components from single MCMC chain
 }
