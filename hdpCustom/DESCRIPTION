@@ -1,0 +1,19 @@
+Package: hdpCustom
+Type: Package
+Title: Custom Functions for Working With 'hdp' Package
+Version: 0.0.0.9999
+Authors@R: c(person("Kevin", "Gori", email="kcg25@cam.ac.uk", role=c("aut")),
+    person("Nicola", "Roberts", email="nr3@sanger.ac.uk", role=c("aut", "cre")),
+    person("Yee Whye", "Teh", role=c("aut", "cph")))
+Maintainer: Kevin Gori <kcg25@cam.ac.uk>
+Description: Custom functions for working with the 'hdp' package.
+    Allows significance level of component exposure to be controlled
+    through parameter 'sig.level' in the extract_component' functions.
+Depends:
+    R (>= 3.2)
+Imports:
+    hdp (>= 0.1.0),
+    methods (>= 3.2)
+License: GPL-3
+LazyData: TRUE
+RoxygenNote: 5.0.1
