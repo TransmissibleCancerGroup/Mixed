@@ -16,6 +16,11 @@ gcc -O3 -std=c99 -o depthreader depthreader.c -lz -lm
 /* Size of the block of memory to use for reading. */
 #define LENGTH 0x1000
 
+<<<<<<< HEAD
+=======
+void clearBuffer(unsigned char *, int);
+
+>>>>>>> b17011dd4978fa14307726933c528bf4f9c6ff70
 /*
 Wipe buffer by filling with null bytes
 */
@@ -27,12 +32,20 @@ void clearBuffer(unsigned char * buffer, int j) {
 
 int main (int argc, const char** argv)
 {
+    gzFile * file;
+    long int nLines=0;
+    int nTabs=0;
+    long int sumCoverage=0;
+    long int sumSqCoverage=0;
+    int maxCoverage=0;
+    int j=0;
+    unsigned char field[LENGTH];
+
     if (argc != 2) {
         fprintf(stderr, "Usage: %s file\n", argv[0]);
         return 1;
     }
 
-    gzFile * file;
     file = gzopen (argv[1], "r");
     if (! file) {
         fprintf (stderr, "gzopen of '%s' failed: %s.\n", argv[1],
@@ -40,12 +53,7 @@ int main (int argc, const char** argv)
             exit (EXIT_FAILURE);
     }
 
-    long int nLines=0;
-    int nTabs=0;
-    long int sumCoverage=0;
-    long int sumSqCoverage=0;
-    int j=0;
-    unsigned char field[LENGTH];
+    clearBuffer((unsigned char *)field, LENGTH-1);
 
     while (1) {
         int err;
@@ -63,7 +71,8 @@ int main (int argc, const char** argv)
             }
             if (buffer[i]=='\n') {
                 nLines += 1;
-                fieldValue = atol((char *) field);
+                fieldValue = atoi((char *) field);
+                if (fieldValue > maxCoverage) maxCoverage = fieldValue;
                 sumCoverage += fieldValue;
                 sumSqCoverage += fieldValue*fieldValue;
 
@@ -95,6 +104,7 @@ int main (int argc, const char** argv)
     printf ("Read total of %ld lines\n", nLines);
     printf ("Sum coverage was %ld\n", sumCoverage);
     printf ("SumSq coverage was %ld\n", sumSqCoverage);
+    printf ("Max coverage was %d\n", maxCoverage);
     printf ("  mean = %f\n", (double)sumCoverage/(double)nLines);
     printf ("  s.d. = %f\n", sqrt(((double)sumSqCoverage - ((double)sumCoverage*(double)sumCoverage/(double)nLines)) / ((double)nLines - 1)));
     return 0;
