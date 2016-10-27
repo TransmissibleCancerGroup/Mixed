@@ -151,34 +151,35 @@ SVs.filt <- simple.repeats(SVs.filt)
 # 3. Filter out breakpoints that self-overlap
 self.overlap <- function(x){
   
-  # 1. Make Granges objects of left and right
+  # 1. Rename rows
+  rownames(x) <- 1:nrow(x)
+  
+  # 2. Downsample set of candidates (depends on genomic names!)
+  x.set <- x[as.character(x[,1])==as.character(x[,4]),]
+  
+  # 3. Make Granges objects of left and right
   require(GenomicRanges)
-  Input.left.Ranges <- GRanges(seqnames = Rle(x[,1]),
-                               ranges = IRanges(start = as.integer(x[,2]),
-                                                end = as.integer(x[,3])))
+  Input.left.Ranges <- GRanges(seqnames = Rle(x.set[,1]),
+                               ranges = IRanges(start = as.integer(x.set[,2]),
+                                                end = as.integer(x.set[,3])))
   
-  Input.right.Ranges <- GRanges(seqnames = Rle(x[,4]),
-                                ranges = IRanges(start = as.integer(x[,5]),
-                                                 end = as.integer(x[,6])))
+  Input.right.Ranges <- GRanges(seqnames = Rle(x.set[,4]),
+                                ranges = IRanges(start = as.integer(x.set[,5]),
+                                                 end = as.integer(x.set[,6])))
   
-  # 2. Pairwise overlap-testing
-  x <- x[Input.left.Ranges %outside% Input.right.Ranges,]
+  # 4. Pairwise overlap-testing
+  OL <- findOverlaps(Input.left.Ranges,Input.right.Ranges)
+  OL <- as.matrix(OL)
+  OL <- OL[OL[,1]==OL[,2],]
+  x.set <- x.set[unique(OL[,1]),]
   
-  # 3. Output
+  # 5. Output
+  cat("\n Total removed: ", round(length(as.numeric(rownames(x.set)))/nrow(x),4)*100, "%")
+  x <- x[-as.numeric(rownames(x.set)),,drop=F]
   return(x)
 }
-SVs.filt <- self.overlap(SVs.filt)
 
-
-## 4. Format
-############
-
-# 1. ChrX renaming
-for (i in c(1,4)){
-  SVs.filt[,i] <- sub('Chrx', 'ChrX', SVs.filt[,i])
-}
-
-# 2. Translate coordinates
+# 4. Translate coordinates
 contig.to.genomic <- function(x){
   
   # 1. Load contig-genomic position file
