@@ -24,6 +24,13 @@ USAGE: pdftile.rb [options] PDF file [| pdflatex]"
     opt.on('--per-row INT', Numeric, 'Number of images in a row') do |i| 
         options[:per_row] = i
     end
+    opt.on('--page-width FLOAT', Numeric, 'Output page width in mm [Optional - default 210]') do |i|
+        options[:page_width] = i
+    end
+    opt.on('--page-height FLOAT', Numeric, 'Output page height in mm [Optional - default 297]') do |i|
+        options[:page_height] = i
+    end
+
     opt.on('PDF file to multiplex') do |f|
     end
 end.parse!
@@ -43,24 +50,36 @@ end
 imgheight = 0.975 / nrow.to_f  # Slightly less than 1/nrow to allow for margins
 imgwidth = 0.975 / ncol.to_f
 
-latexhead = <<'EOF'
-\documentclass{article}
-\usepackage[pdftex]{graphicx}
-\usepackage[margin=0.1in]{geometry}
-\usepackage{pdfpages}
-\begin{document}
+# Scan pdf file with pdfinfo to get number of pages and dimensions
+v = %x[pdfinfo #{options[:filename]}].split(/\n/).select{|x| x=~ /Pages:/ or x=~ /Page size:/}.map { |x| x.split(/\s+/) }
+pages = v[0][1].to_i
+if options[:page_width].nil?
+    original_width = v[1][2].to_f / 2.845  # Convert to mm (~2.845 pts per mm)
+    options[:page_width] = ncol * original_width
+end
+if options[:page_height].nil?
+    original_height = v[1][4].to_f / 2.845
+    options[:page_height] = nrow * original_height
+end
+
+
+latexhead = <<-EOF
+\\documentclass{article}
+\\usepackage[pdftex]{graphicx}
+\\usepackage[margin=0.1in,paperheight=#{'%.02f' % options[:page_height]}mm,paperwidth=#{'%.02f' % options[:page_width]}mm]{geometry}
+\\usepackage{pdfpages}
+\\begin{document}
 EOF
 latextail = <<'EOF'
 \end{document}
 EOF
 
-pages = %x[pdfinfo #{options[:filename]}].split(/\n/).select{|x| x=~ /Pages:/}[0].split(/\s+/)[1].to_i
 puts latexhead
 s = (1..pages).each_slice(options[:per_page]).to_a
 s.each do |a|
   puts "\\begin{figure}[!ht]"
   a.each do |p|
-    puts "\\includegraphics[page=#{p},scale=0.2,height=#{'%.03f' % imgheight}\\textheight,width=#{'%.03f' % imgwidth}\\textwidth]{#{options[:filename]}}"
+    puts "\\includegraphics[page=#{p},height=#{'%.03f' % imgheight}\\textheight,width=#{'%.03f' % imgwidth}\\textwidth]{#{options[:filename]}}"
   end
   puts "\\end{figure}"
 end
