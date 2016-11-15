@@ -24,10 +24,10 @@ USAGE: pdftile.rb [options] PDF file [| pdflatex]"
     opt.on('--per-row INT', Numeric, 'Number of images in a row') do |i| 
         options[:per_row] = i
     end
-    opt.on('--page-width FLOAT', Numeric, 'Output page width in mm [Optional - default 210]') do |i|
+    opt.on('--page-width FLOAT', Numeric, 'Output page width in mm [Optional - scanned from input pdf]') do |i|
         options[:page_width] = i
     end
-    opt.on('--page-height FLOAT', Numeric, 'Output page height in mm [Optional - default 297]') do |i|
+    opt.on('--page-height FLOAT', Numeric, 'Output page height in mm [Optional - scanned from input pdf]') do |i|
         options[:page_height] = i
     end
 
@@ -80,6 +80,7 @@ s.each do |a|
   puts "\\begin{figure}[!ht]"
   a.each do |p|
     puts "\\includegraphics[page=#{p},height=#{'%.03f' % imgheight}\\textheight,width=#{'%.03f' % imgwidth}\\textwidth]{#{options[:filename]}}"
+    puts "\\centering"
   end
   puts "\\end{figure}"
 end
