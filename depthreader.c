@@ -15,6 +15,7 @@ gcc -O3 -std=c99 -o depthreader depthreader.c -lz -lm
 
 /* Size of the block of memory to use for reading. */
 #define LENGTH 0x1000
+#define CUTOFF 10000
 
 void clearBuffer(unsigned char *, int);
 
@@ -37,6 +38,10 @@ int main (int argc, const char** argv)
     int maxCoverage=0;
     int j=0;
     unsigned char field[LENGTH];
+    long int histogram[CUTOFF+1];  // use this to calculate median
+    for (size_t i=0; i < (CUTOFF+1); ++i) {
+        histogram[i] = 0;
+    }
 
     if (argc != 2) {
         fprintf(stderr, "Usage: %s file\n", argv[0]);
@@ -69,7 +74,19 @@ int main (int argc, const char** argv)
             if (buffer[i]=='\n') {
                 nLines += 1;
                 fieldValue = atoi((char *) field);
-                if (fieldValue > maxCoverage) maxCoverage = fieldValue;
+
+                // Keep track of max read coverage value seen
+                if (fieldValue > maxCoverage) {
+                    maxCoverage = fieldValue;
+                }
+
+                // Place value in histogram for median
+                if (fieldValue >= CUTOFF) {
+                    histogram[CUTOFF] += 1;  // collapse all huge values into last bin
+                }
+                else {
+                    histogram[fieldValue] += 1;
+                }
                 sumCoverage += fieldValue;
                 sumSqCoverage += fieldValue*fieldValue;
 
@@ -98,11 +115,27 @@ int main (int argc, const char** argv)
         }
     }
     gzclose (file);
+
+    // Now find median
+
+    double m50 = nLines / 2.0;
+    long int runningsum = 0;
+    int median = 0;
+
+    for (size_t i=0; i < (CUTOFF+1); ++i) {
+        runningsum += histogram[i];
+        if (runningsum > m50) {
+            median = (int) i;  // should be close enough, will be off by 0.5 in the unlikely event the previous bin has exactly m50 reads running total
+            break;
+        }
+    }
+
     printf ("Read total of %ld lines\n", nLines);
     printf ("Sum coverage was %ld\n", sumCoverage);
     printf ("SumSq coverage was %ld\n", sumSqCoverage);
     printf ("Max coverage was %d\n", maxCoverage);
-    printf ("  mean = %f\n", (double)sumCoverage/(double)nLines);
-    printf ("  s.d. = %f\n", sqrt(((double)sumSqCoverage - ((double)sumCoverage*(double)sumCoverage/(double)nLines)) / ((double)nLines - 1)));
+    printf ("  mean   = %f\n", (double)sumCoverage/(double)nLines);
+    printf ("  s.d.   = %f\n", sqrt(((double)sumSqCoverage - ((double)sumCoverage*(double)sumCoverage/(double)nLines)) / ((double)nLines - 1)));
+    printf ("  median = %d\n", median);
     return 0;
 }
