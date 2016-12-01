@@ -186,7 +186,7 @@ set -o nounset
 # default OUTPUT if not provided
 if test -z "$OUTPUT"
 then
-    OUTPUT=`basename "${FULL_BAM_LIST[0]}"`.vcf
+    OUTPUT=`basename "${FULL_BAM_LIST[0]}"`.tmp
 fi
 OUTBASE=`basename "$OUTPUT"`
 
@@ -208,216 +208,50 @@ cleanup () {
 	rm -rf $TEMP_DIR
 }
 trap cleanup EXIT
+####################################
+# Extract split and discordant reads
+####################################
 
-# If splitter and discordant BAMs not provided, generate them
-# (LUMPY express)
 set +o nounset
-if [[ -z "${SPL_BAM_LIST}${DISC_BAM_LIST}" ]]
-then
-    # initialize split and discordant bam lists
-    SPL_BAM_LIST=()
-    DISC_BAM_LIST=()
+# initialize split and discordant bam lists
+SPL_BAM_LIST=()
+DISC_BAM_LIST=()
 
-    # create temp files and pipes
-    mkdir -p $TEMP_DIR/spl $TEMP_DIR/disc
-    # if [[ ! -e $TEMP_DIR/spl_pipe ]]
-    # then
-	# mkfifo $TEMP_DIR/spl_pipe
-    # fi
-    # if [[ ! -e $TEMP_DIR/disc_pipe ]]
-    # then
-	# mkfifo $TEMP_DIR/disc_pipe
-    # fi
+# create temp files
+mkdir -p $TEMP_DIR/spl $TEMP_DIR/disc
 
-    # generate histo files and construct the strings for LUMPY
-    for i in $( seq 0 $(( ${#FULL_BAM_LIST[@]}-1 )) )
-    do
-	FULL_BAM=${FULL_BAM_LIST[$i]}
+# generate histo files and construct the strings for LUMPY
+for i in $( seq 0 $(( ${#FULL_BAM_LIST[@]}-1 )) ); do
+    FULL_BAM=${FULL_BAM_LIST[$i]}
 
-	# calc readlength if not provided
-	set +o pipefail
-	READ_LENGTH=`$SAMT view $FULL_BAM | head -n 10000 | gawk 'BEGIN { MAX_LEN=0 } { LEN=length($10); if (LEN>MAX_LEN) MAX_LEN=LEN } END { print MAX_LEN }'`
-	set -o pipefail
+    # calc readlength if not provided
+    set +o pipefail
+    READ_LENGTH=`$SAMT view $FULL_BAM | head -n 10000 | gawk 'BEGIN { MAX_LEN=0 } { LEN=length($10); if (LEN>MAX_LEN) MAX_LEN=LEN } END { print MAX_LEN }'`
+    set -o pipefail
 
-	# parse the libraries in the BAM header to extract readgroups from the same library
-	LIB_RG_LIST=(`$PYTHON $BAMLIBS $FULL_BAM`)
+    # parse the libraries in the BAM header to extract readgroups from the same library
+    LIB_RG_LIST=(`$PYTHON $BAMLIBS $FULL_BAM`)
 
-	# process each library's splitters and discordants
-	for j in $( seq 0 $(( ${#LIB_RG_LIST[@]}-1 )) )
-	do
+    # process each library's splitters and discordants
+    for j in $( seq 0 $(( ${#LIB_RG_LIST[@]}-1 )) ); do
         SPLITTER=${FULL_BAM%.bam}.spl.sam
         DISCORDS=${FULL_BAM%.bam}.disc.sam
 
-		if [[ "$VERBOSE" -eq 1 ]]; then
+        if [[ "$VERBOSE" -eq 1 ]]; then
             echo -e "$PYTHON $BAMGROUPREADS --fix_flags -i $FULL_BAM -r ${LIB_RG_LIST[$j]} \
-| $SAMBLASTER --acceptDupMarks --excludeDups --addMateTags --maxSplitCount $MAX_SPLIT_COUNT --minNonOverlap $MIN_NON_OVERLAP \
---splitterFile $SPLITTER --discordantFile $DISCORDS > /dev/null"
+    | $SAMBLASTER --acceptDupMarks --excludeDups --addMateTags --maxSplitCount $MAX_SPLIT_COUNT --minNonOverlap $MIN_NON_OVERLAP \
+    --splitterFile $SPLITTER --discordantFile $DISCORDS > /dev/null"
             echo -e "$SAMTOBAM $SPLITTER | $SAMSORT $TEMP_DIR/spl -o ${SPLITTER%.sam}.bam /dev/stdin"
             echo -e "$SAMTOBAM $DISCORDS | $SAMSORT $TEMP_DIR/disc -o ${DISCORDS%.sam}.bam /dev/stdin" 
         fi
 
-	    $PYTHON $BAMGROUPREADS --fix_flags -i $FULL_BAM -r ${LIB_RG_LIST[$j]} \
-		| $SAMBLASTER --acceptDupMarks --excludeDups --addMateTags --maxSplitCount $MAX_SPLIT_COUNT --minNonOverlap $MIN_NON_OVERLAP \
-		    --splitterFile $SPLITTER --discordantFile $DISCORDS > /dev/null
+        $PYTHON $BAMGROUPREADS --fix_flags -i $FULL_BAM -r ${LIB_RG_LIST[$j]} \
+        | $SAMBLASTER --acceptDupMarks --excludeDups --addMateTags --maxSplitCount $MAX_SPLIT_COUNT --minNonOverlap $MIN_NON_OVERLAP \
+            --splitterFile $SPLITTER --discordantFile $DISCORDS > /dev/null && echo "Samblaster stage success!"
 
-        $SAMTOBAM $SPLITTER | $SAMSORT $TEMP_DIR/spl -o ${SPLITTER%.sam}.bam /dev/stdin && rm $SPLITTER
-        $SAMTOBAM $DISCORDS | $SAMSORT $TEMP_DIR/disc -o ${DISCORDS%.sam}.bam /dev/stdin && rm $DISCORDS
-	    wait
-
-	    # generate discordant pair string for LUMPY
-		# DISC_BAM=$TEMP_DIR/$OUTBASE.sample$(($i+1)).discordants.bam
-		# DISC_SAMPLE=`$SAMT view -H $FULL_BAM | grep -m 1 "^@RG" | gawk -v i=$i '{ for (j=1;j<=NF;++j) {if ($j~"^SM:") { gsub("^SM:","",$j); print $j } } }'`
-		# RG_STRING=`echo "${LIB_RG_LIST[$j]}" | sed 's/,/,read_group:/g' | sed 's/^/read_group:/g'`
-		# MEAN=`cat ${TEMP_DIR}/$OUTBASE.sample$(($i+1)).lib$(($j+1)).insert.stats | tr '\t' '\n' | grep "^mean" | sed 's/mean\://g'`
-		# STDEV=`cat ${TEMP_DIR}/$OUTBASE.sample$(($i+1)).lib$(($j+1)).insert.stats | tr '\t' '\n' | grep "^stdev" | sed 's/stdev\://g'`
-		# LUMPY_DISC_STRING="$LUMPY_DISC_STRING -pe bam_file:${DISC_BAM},histo_file:${TEMP_DIR}/$OUTBASE.sample$(($i+1)).lib$(($j+1)).x4.histo,mean:${MEAN},stdev:${STDEV},read_length:${READ_LENGTH},min_non_overlap:${READ_LENGTH},discordant_z:5,back_distance:10,weight:1,id:${DISC_SAMPLE},min_mapping_threshold:20,${RG_STRING}"
-
-	    # generate split-read string for LUMPY
-		# SPL_BAM=$TEMP_DIR/$OUTBASE.sample$(($i+1)).splitters.bam
-		# SPL_SAMPLE=`$SAMT view -H $FULL_BAM | grep -m 1 "^@RG" | gawk -v i=$i '{ for (j=1;j<=NF;++j) {if ($j~"^SM:") { gsub("^SM:","",$j); print $j } } }'`
-		# LUMPY_SPL_STRING="$LUMPY_SPL_STRING -sr bam_file:${SPL_BAM},back_distance:10,min_mapping_threshold:20,weight:1,id:${SPL_SAMPLE},min_clip:20,${RG_STRING}"
-	done
-
-	# merge the splitters and discordants files
-	# if [[ ${#LIB_RG_LIST[@]} -gt 1 ]]
-	# then
-		# MERGE_DISCORDANTS=""
-		# MERGE_SPLITTERS=""
-		# for j in $( seq 0 $(( ${#LIB_RG_LIST[@]}-1 )) )
-		# do
-		# MERGE_DISCORDANTS="$MERGE_DISCORDANTS $TEMP_DIR/$OUTBASE.sample$(($i+1)).lib$(($j+1)).discordants.bam"
-		# MERGE_SPLITTERS="$MERGE_SPLITTERS ${TEMP_DIR}/$OUTBASE.sample$(($i+1)).lib$(($j+1)).splitters.bam"
-		# done
-
-		# if [[ $VERBOSE -eq 1 ]]
-		# then
-		# echo "
-		# $SAMT merge ${TEMP_DIR}/$OUTBASE.sample$(($i+1)).discordants.bam $MERGE_DISCORDANTS
-		# $SAMT merge ${TEMP_DIR}/$OUTBASE.sample$(($i+1)).splitters.bam $MERGE_SPLITTERS
-		# rm $MERGE_DISCORDANTS $MERGE_SPLITTERS"
-		# fi
-		# $SAMT merge ${TEMP_DIR}/$OUTBASE.sample$(($i+1)).discordants.bam $MERGE_DISCORDANTS
-		# $SAMT merge ${TEMP_DIR}/$OUTBASE.sample$(($i+1)).splitters.bam $MERGE_SPLITTERS
-		# rm $MERGE_DISCORDANTS $MERGE_SPLITTERS
-	# else
-		# mv ${TEMP_DIR}/$OUTBASE.sample$(($i+1)).lib$(($j+1)).discordants.bam ${TEMP_DIR}/$OUTBASE.sample$(($i+1)).discordants.bam
-		# mv ${TEMP_DIR}/$OUTBASE.sample$(($i+1)).lib$(($j+1)).splitters.bam ${TEMP_DIR}/$OUTBASE.sample$(($i+1)).splitters.bam
-	# fi
-
-	# update the splitters and discordant BAM lists
-	# SPL_BAM_LIST+=(${TEMP_DIR}/$OUTBASE.sample$(($i+1)).splitters.bam)
-	# DISC_BAM_LIST+=(${TEMP_DIR}/$OUTBASE.sample$(($i+1)).discordants.bam)
+        $SAMTOBAM $SPLITTER | $SAMSORT $TEMP_DIR/spl -o ${SPLITTER%.sam}.bam /dev/stdin && rm $SPLITTER && echo "Split reads sorting stage: success!"
+        $SAMTOBAM $DISCORDS | $SAMSORT $TEMP_DIR/disc -o ${DISCORDS%.sam}.bam /dev/stdin && rm $DISCORDS && echo "Discordant reads sorting stage: success!"
+        wait
     done
+done
 exit
-# else (user provided a splitter and discordants file)
-else
-    # parse the libraries in the BAM header to extract readgroups from the same library
-    for i in $( seq 0 $(( ${#FULL_BAM_LIST[@]}-1 )) )
-    do
-	FULL_BAM=${FULL_BAM_LIST[$i]}
-	DISC_BAM=${DISC_BAM_LIST[$i]}
-	SPL_BAM=${SPL_BAM_LIST[$i]}
-
-	# LIB_RG_LIST contains an element for each library in the BAM file.
-	# These elements are comma delimited strings for the readgroups for each library.
-	LIB_RG_LIST=(`$PYTHON $BAMLIBS ${FULL_BAM_LIST[$i]}`)
-
-
-	if [[ ${#LIB_RG_LIST[@]} -eq 0 ]]
-	then
-	    echo "Warning: BAM file lacks read groups, paired-end analysis may fail"
-	fi
-
-	# generate the histo, stats, and config files
-	echo "Calculating insert distributions... "
-	for j in $( seq 0 $(( ${#LIB_RG_LIST[@]}-1 )) )
-	do
-	    # calculate read length if not provided
-	    set +o pipefail
-	    LIB_READ_LENGTH_LIST+=(`$SAMT view ${FULL_BAM_LIST[$i]} | head -n 10000 | gawk 'BEGIN { MAX_LEN=0 } { LEN=length($10); if (LEN>MAX_LEN) MAX_LEN=LEN } END { print MAX_LEN }'`)
-	    echo "Library read groups: ${LIB_RG_LIST[$j]}"
-	    echo "Library read length: ${LIB_READ_LENGTH_LIST[$j]}"
-	    $SAMT_STREAM ${FULL_BAM_LIST[$i]} \
-		| $PYTHON $BAMFILTERRG -n 10000000 --readgroup ${LIB_RG_LIST[$j]} \
-		| grep -v '^@' \
-		| tail -n 1000000 \
-		| $PYTHON $PAIREND_DISTRO -r ${LIB_READ_LENGTH_LIST[$j]} -X 4 -N 1000000 -o ${TEMP_DIR}/$OUTBASE.sample$(($i+1)).lib$(($j+1)).x4.histo \
-		> ${TEMP_DIR}/$OUTBASE.sample$(($i+1)).lib$(($j+1)).insert.stats
-	    set -o pipefail
-	done
-	echo "done"
-
-	# construct LUMPY_SPL_STRING
-	SPL_SAMPLE=`$SAMT view -H $SPL_BAM | grep -m 1 "^@RG" | gawk -v i=$i '{ for (j=1;j<=NF;++j) {if ($j~"^SM:") { gsub("^SM:","",$j); print $j } } }'`
-	LUMPY_SPL_STRING="$LUMPY_SPL_STRING -sr bam_file:${SPL_BAM},back_distance:10,min_mapping_threshold:20,weight:1,id:${SPL_SAMPLE},min_clip:20"
-
-	# construct LUMPY_DISC_STRING
-	for j in $( seq 0 $(( ${#LIB_RG_LIST[@]}-1 )) )
-	do
-	    echo $(( ${#FULL_BAM_LIST[@]}-1 ))
-	    DISC_BAM=${DISC_BAM_LIST[$i]}
-	    DISC_SAMPLE=`$SAMT view -H $DISC_BAM | grep -m 1 "^@RG" | gawk -v i=$i '{ for (j=1;j<=NF;++j) {if ($j~"^SM:") { gsub("^SM:","",$j); print $j } } }'`
-	    MEAN=`cat ${TEMP_DIR}/$OUTBASE.sample$(($i+1)).lib$(($j+1)).insert.stats | tr '\t' '\n' | grep "^mean" | sed 's/mean\://g'`
-	    STDEV=`cat ${TEMP_DIR}/$OUTBASE.sample$(($i+1)).lib$(($j+1)).insert.stats | tr '\t' '\n' | grep "^stdev" | sed 's/stdev\://g'`
-	    RG_STRING=`echo "${LIB_RG_LIST[$j]}" | sed 's/,/,read_group:/g' | sed 's/^/read_group:/g'`
-
-	    if [[ "$MEAN" != "NA" ]] && [[ "$STDEV" != "NA" ]]
-	    then
-		LUMPY_DISC_STRING="$LUMPY_DISC_STRING -pe bam_file:${DISC_BAM},histo_file:${TEMP_DIR}/$OUTBASE.sample$(($i+1)).lib$(($j+1)).x4.histo,mean:${MEAN},stdev:${STDEV},read_length:${LIB_READ_LENGTH_LIST[$j]},min_non_overlap:${LIB_READ_LENGTH_LIST[$j]},discordant_z:5,back_distance:10,weight:1,id:${DISC_SAMPLE},min_mapping_threshold:20,${RG_STRING}"
-	    fi
-	done
-    done
-fi
-
-LUMPY_DEPTH_STRING=""
-if [[ ! -z "$DEPTH_BED_LIST" ]]; then
-	# -bedpe bedpe_file:<bedpe file>,id:<sample name>,weight:<sample weight>
-	set -o nounset
-	for j in $( seq 0 $(( ${#DEPTH_BED_LIST[@]}-1 )) )
-	do
-		rec=${DEPTH_BED_LIST[$j]}
-		f=$(echo $rec | perl -pe 's/^.+://')
-		sample=$(echo $rec | perl -pe 's/:.+$//')
-		# give weight of 4 since these have been called before.
-		LUMPY_DEPTH_STRING="$LUMPY_DEPTH_STRING -bedpe bedpe_file:$f,id:$sample,weight:4"
-	done
-	set +o nounset
-
-fi
-
-echo "Running LUMPY... "
-if [[ "$VERBOSE" -eq 1 ]]
-then
-    echo "
-$LUMPY ${PROB_CURVE} \\
-    -t ${TEMP_DIR}/${OUTBASE} \\
-    -msw $MIN_SAMPLE_WEIGHT \\
-    -tt $TRIM_THRES \\
-    $LUMPY_DEPTH_STRING \\
-    $EXCLUDE_BED_FMT \\
-    $LUMPY_DISC_STRING \\
-    $LUMPY_SPL_STRING \\
-    > $OUTPUT"
-fi
-# call lumpy
-$LUMPY -b $PROB_CURVE -t ${TEMP_DIR}/${OUTBASE} -msw $MIN_SAMPLE_WEIGHT -tt $TRIM_THRES \
-    $LUMPY_DEPTH_STRING \
-    $EXCLUDE_BED_FMT \
-    $LUMPY_DISC_STRING \
-    $EXCLUDE_BED_FMT \
-    $LUMPY_SPL_STRING \
-    > $OUTPUT
-
-# clean up
-if [[ "$KEEP" -eq 0 ]]
-then
-    rm -r ${TEMP_DIR}
-fi
-
-echo "LUMPY Express done"
-
-# exit cleanly
-exit 0
-
-
-## END SCRIPT
