@@ -1,0 +1,17 @@
+Package: dftdpower
+Type: Package
+Title: What the package does (short line)
+Version: 1.0
+Date: 2017-03-17
+Author: Who wrote it
+Maintainer: Who to complain to <yourfault@somewhere.net>
+Description: More about what it does (maybe more than one line)
+License: What license is it under?
+Depends: R (>= 3.0.2), Rcpp (>= 0.12.9), methods
+Imports: rstan (>= 2.14.1), rethinking (>= 1.59)
+LinkingTo: StanHeaders (>= 2.14.0.1), rstan (>= 2.14.1), BH (>= 1.62.0.1), Rcpp (>= 0.12.9), RcppEigen (>= 0.3.2.9.0)
+RcppModules: stan_fit4model_mod
+RoxygenNote: 5.0.1
+NeedsCompilation: yes
+Suggests: knitr, rmarkdown
+VignetteBuilder: knitr
