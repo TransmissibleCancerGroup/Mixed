@@ -1,8 +1,8 @@
 library(rstan)
-library(rethinking)
+library(coda)
 
 plothist <- function(data, cred = 0.95, titletext = "", xlim = NULL, ylim = NULL) {
-    credint = HPDI(data, cred)
+    credint = coda::HPDinterval(data, cred)
     h <- MASS::truehist(data, xlim = xlim, ylim = ylim)
     current_ylim = par("usr")[4]
     line_height = current_ylim / 25
@@ -30,7 +30,7 @@ plothist <- function(data, cred = 0.95, titletext = "", xlim = NULL, ylim = NULL
 #' @useDynLib dftdpower, .registration = TRUE 
 #' @importFrom "rstan" extract
 #' @importFrom "rstan" sampling
-#' @importFrom "rethinking" HPDI
+#' @importFrom "coda" HPDinterval
 #' @importFrom "MASS" truehist
 #' @export
 run <- function(proportion, mutations, signatures, outerloop = 100, stan.iter = 2000, stan.chains = 1, stan.warmup = 1000,
@@ -85,9 +85,9 @@ run <- function(proportion, mutations, signatures, outerloop = 100, stan.iter = 
     null.v <- sample(as.vector(null), total_samples)
     
     # Compute statistics
-    hpdi.null <- HPDI(null.v, credint)
-    hpdi.alt <- HPDI(alt.v, credint)
-    hpdi.diff <- HPDI(alt.v - null.v, credint)
+    hpdi.null <- HPDinterval(null.v, credint)
+    hpdi.alt <- HPDinterval(alt.v, credint)
+    hpdi.diff <- HPDinterval(alt.v - null.v, credint)
     
     alt.gt.HPD <- mean(alt.v > hpdi.null) # What proportion of alt is above the 95% upper HPD of null?
     diff.gt.0 <- mean(alt.v - null.v > 0)
@@ -96,7 +96,7 @@ run <- function(proportion, mutations, signatures, outerloop = 100, stan.iter = 
     par(mfrow = c(1,1))
     MASS::truehist(null.v)
     plotyrange <- par("usr")[3:4]
-    plotxrange <- c(min(0, HPDI(alt.v-null.v, 0.995)[1]), HPDI(alt.v, 0.995)[2])  # put all hists on a common x-axis range
+    plotxrange <- c(min(0, HPDinterval(alt.v-null.v, 0.995)[1]), HPDinterval(alt.v, 0.995)[2])  # put all hists on a common x-axis range
     par(mfrow = c(3,1))
     print(
         plothist(alt.v, credint, 
