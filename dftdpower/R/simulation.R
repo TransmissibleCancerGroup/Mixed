@@ -1,9 +1,12 @@
 library(rstan)
 library(coda)
 
+#' @importFrom "coda" HPDinterval
+#' @importFrom "coda" as.mcmc
+#' @importFrom "MASS" truehist
 plothist <- function(data, cred = 0.95, titletext = "", xlim = NULL, ylim = NULL) {
-    credint = coda::HPDinterval(data, cred)
-    h <- MASS::truehist(data, xlim = xlim, ylim = ylim)
+    credint = HPDinterval(as.mcmc(data), cred)
+    h <- truehist(data, xlim = xlim, ylim = ylim)
     current_ylim = par("usr")[4]
     line_height = current_ylim / 25
     title(main = titletext)
@@ -31,6 +34,7 @@ plothist <- function(data, cred = 0.95, titletext = "", xlim = NULL, ylim = NULL
 #' @importFrom "rstan" extract
 #' @importFrom "rstan" sampling
 #' @importFrom "coda" HPDinterval
+#' @importFrom "coda" as.mcmc
 #' @importFrom "MASS" truehist
 #' @export
 run <- function(proportion, mutations, signatures, outerloop = 100, stan.iter = 2000, stan.chains = 1, stan.warmup = 1000,
@@ -85,18 +89,19 @@ run <- function(proportion, mutations, signatures, outerloop = 100, stan.iter = 
     null.v <- sample(as.vector(null), total_samples)
     
     # Compute statistics
-    hpdi.null <- HPDinterval(null.v, credint)
-    hpdi.alt <- HPDinterval(alt.v, credint)
-    hpdi.diff <- HPDinterval(alt.v - null.v, credint)
+    hpdi.null <- HPDinterval(as.mcmc(null.v), credint)
+    hpdi.alt <- HPDinterval(as.mcmc(alt.v), credint)
+    hpdi.diff <- HPDinterval(as.mcmc(alt.v - null.v), credint)
     
-    alt.gt.HPD <- mean(alt.v > hpdi.null) # What proportion of alt is above the 95% upper HPD of null?
+    alt.gt.HPD <- mean(alt.v > hpdi.null[2]) # What proportion of alt is above the 95% upper HPD of null?
     diff.gt.0 <- mean(alt.v - null.v > 0)
     
     # Plot histograms
     par(mfrow = c(1,1))
     MASS::truehist(null.v)
     plotyrange <- par("usr")[3:4]
-    plotxrange <- c(min(0, HPDinterval(alt.v-null.v, 0.995)[1]), HPDinterval(alt.v, 0.995)[2])  # put all hists on a common x-axis range
+    plotxrange <- c(min(0, HPDinterval(as.mcmc(alt.v - null.v), 0.995)[1]), 
+                    HPDinterval(as.mcmc(alt.v), 0.995)[2])  # put all hists on a common x-axis range
     par(mfrow = c(3,1))
     print(
         plothist(alt.v, credint, 
