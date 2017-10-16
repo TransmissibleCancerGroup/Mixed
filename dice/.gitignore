@@ -1,0 +1,14 @@
+.dub
+docs.json
+__dummy.html
+docs/
+dice.so
+dice.dylib
+dice.dll
+dice.a
+dice.lib
+dice-test-*
+*.exe
+*.o
+*.obj
+*.lst
