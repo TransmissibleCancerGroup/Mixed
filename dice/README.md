@@ -26,3 +26,11 @@ A fast version can be built with
 
     dub build --compiler=ldc2 --build=release
 
+dice_cpp is written in C++. It can be build using cmake:
+
+    mkdir build
+    cd build
+    cmake .. -DCMAKE_BUILD_TYPE=Release
+    make
+    cp dice ../dice_cpp
+

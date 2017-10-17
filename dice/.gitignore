@@ -12,3 +12,5 @@ dice-test-*
 *.o
 *.obj
 *.lst
+
+build/*
