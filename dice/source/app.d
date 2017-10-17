@@ -8,6 +8,7 @@ import std.range;
 import std.stdio;
 import std.traits;
 import std.typecons;
+import core.time: MonoTime;
 
 import darg;
 
@@ -79,6 +80,7 @@ immutable usage = usageString!Options("example");
 immutable help = helpString!Options;
 
 int main(string[] args) {
+    auto start = MonoTime.currTime;
     Options options;
 
     try
@@ -117,6 +119,8 @@ int main(string[] args) {
 
     auto results = new int[nrep];
 
+    writefln("Using %d threads", options.threads);
+    
     if (options.threads > 1) {
         foreach(ref elem; pool.parallel(results)) {
             elem = mutate(n_mutations, spectrum, opps);
@@ -131,6 +135,9 @@ int main(string[] args) {
 
     double prob = to!double(results.sum()) / nrep;
     writefln("Estimated probability of at least one recurrent mutation = %f", prob);
+    auto end = MonoTime.currTime;
+    auto duration = end - start;
+    writeln("Time taken: ", duration.total!"msecs", "ms");
     return 0;
 }
 
