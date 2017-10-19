@@ -6,4 +6,3 @@ set(CMAKE_CXX_STANDARD 11)
 
 add_executable(dice main.cpp)
 target_link_libraries(dice pthread)
-
