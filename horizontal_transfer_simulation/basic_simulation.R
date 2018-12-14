@@ -12,7 +12,7 @@
 ############
 # Input data
 ############
-haplotypes <- c("A1a1", "B1", "A1d1a", "C1", "C2", "A1f", "A1h", "A2", "A1e", "A6", "A1b", "A1c", "A1d2", "A1d1", "A4", "A5", "B2", "A1")
+haplotypes <- factor(c("A1a1", "B1", "A1d1a", "C1", "C2", "A1f", "A1h", "A2", "A1e", "A6", "A1b", "A1c", "A1d2", "A1d1", "A4", "A5", "B2", "A1"))
 totals <- c(144, 98, 97, 39, 26, 18, 15, 11, 10, 9, 6, 6, 5, 3, 3, 2, 2, 1)
 cases <- c(5, 1, 11, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0)
 names(totals) <- haplotypes
@@ -26,13 +26,9 @@ set.seed(76) # <- Always same results for given random number seed
 simulation_reps <- 10000 # Run this many iterations of the simulation
 
 # Generate simulated data
-counts <- matrix(0, nrow=simulation_reps, ncol=18, dimnames=list(1:simulation_reps, haplotypes))
-for (i in 1:nrow(counts)) {
-    .sample <- sample(haplotypes, size = sum(cases), replace = TRUE, prob = totals)
-    .counts <- table(.sample)
-    counts[i, names(.counts)] <- .counts
-}
-
+counts <- t(sapply(1:simulation_reps, function(...) {
+    table(sample(haplotypes, size = sum(cases), replace = TRUE, prob = totals))
+}))
 
 ######################
 # Function definitions
